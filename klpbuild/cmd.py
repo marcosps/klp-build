@@ -169,7 +169,7 @@ def main_func(main_args):
         codestreams = setup.setup_codestreams(
             {"cve": args.cve, "conf": args.conf, "lp_filter": args.filter,
                 "lp_skips": args.skips, "no_check": args.no_check})
-        setup.setup_project_files(codestreams, ffuncs, args.archs.sort())
+        setup.setup_project_files(codestreams, ffuncs, args.archs)
 
     elif args.cmd == "extract":
         Extractor(args.name, args.filter, args.apply_patches, args.avoid_ext).run()

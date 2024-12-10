@@ -78,6 +78,8 @@ class Setup(Config):
     def setup_project_files(self, codestreams, ffuncs, archs):
         self.lp_path.mkdir(exist_ok=True)
 
+        archs.sort()
+
         logging.info("Affected architectures:")
         logging.info("\t%s", ' '.join(archs))
 
