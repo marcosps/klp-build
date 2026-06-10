@@ -210,6 +210,7 @@ def find_file_config(cs, path):
     # the given file path.
     elif path.startswith("arch"):
         arch = _get_arch_in_path(path)
+        cfg = cs.get_all_configs(config)
         if arch and (len(cfg.archs()) != 1 or cfg.get_arch(arch) is ConfigState.NOT_SET):
             return archs_config[arch]['conf'], archs_config[arch]['module']
 

@@ -201,6 +201,11 @@ def analyse_kmodules(cs_list):
     report = defaultdict(list)
 
     for cs in cs_list:
+        # Per-codestream local dedup. Previously this scribbled bool flags into
+        # cs.modules and patch.filter_unsupported_kmodules called .clear()
+        # afterwards; with AffectedModule the supported / blacklisted fields
+        # live on the persistent module object, so dedup needs its own scratch
+        # set to avoid touching cs.modules until we have a real result.
         seen: set[str] = set()
         for f in cs.files.values():
             mod_name = f.module_name
@@ -251,6 +256,13 @@ def filter_unsupported_kmodules(cs_list):
         # (None / False are not).
         if not any(m.supported for m in cs.modules.values()):
             unset_cs.append(cs)
+
+        # NOTE: previously cs.modules.clear() was called here to wipe the
+        # supportedness bools so the path-cache repopulation in
+        # setup.__setup_check_mod could reuse the dict. With AffectedModule the
+        # supported/blacklisted flags and the per-arch obj-path cache are
+        # independent fields on the same object, so the wipe is no longer
+        # needed - and would in fact destroy state we want to keep.
 
     for cs in unset_cs:
         cs_list.remove(cs)
