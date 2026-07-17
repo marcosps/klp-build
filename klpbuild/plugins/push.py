@@ -1,31 +1,70 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
-# Copyright (C) 2025 SUSE
+# Copyright (C) 2026 SUSE
 # Author: Marcos Paulo de Souza <mpdesouza@suse.com>
 
 import logging
 import os
-from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 from osctiny import Osc
 
-from klpbuild.klplib.cmd import add_arg_lp_name, add_arg_lp_filter
+from klpbuild.klplib.cmd import add_arg_lp_filter, add_arg_lp_name
 from klpbuild.klplib.codestreams_data import get_codestreams_list
 from klpbuild.klplib.ibs import convert_cs_to_prj, delete_project, prj_prefix
-from klpbuild.klplib.utils import (classify_codestreams_str, filter_codestreams,
-                                   filter_fast,
-                                   get_cs_branch)
-from klpbuild.plugins.status import status
+from klpbuild.klplib.kgraft import (
+    create_lp_branch,
+    delete_lp_branches,
+    fetch_branch,
+    find_lp_branches,
+    get_kgraft,
+    rebase_lp_branch,
+)
+from klpbuild.klplib.utils import (
+    classify_codestreams_str,
+    filter_codestreams,
+    filter_fast,
+    get_cs_branch,
+)
 from klpbuild.plugins.commit import commit
-from klpbuild.klplib.kgraft import (create_lp_branch, fetch_branch,
-                                    rebase_lp_branch, find_lp_branches,
-                                    delete_lp_branches, get_kgraft)
+from klpbuild.plugins.status import status
 
 PLUGIN_CMD = "push"
+
+
+def validate_patched_objs(prj_path: Path):
+    """
+    Validate if all patched objects are listed on patched_funcs.csv
+    Returns:
+        Exits with return code as 1 if it finds a livepatched modules in
+        all .c files that is not mapped into patched_funcs.csv.
+    """
+
+    mods = []
+
+    with open(prj_path / "patched_funcs.csv", "r") as pf:
+        for line in pf.readlines():
+            data = line.split(" ")
+
+            print(data)
+            # module is located i the first field
+            mods.append(data[0])
+
+    for f in prj_path.glob("*.c"):
+        with open(f, "r") as fdata:
+            buf = fdata.read()
+
+        match = re.search(r"KLP_RELOC_SYMBOL\(([\w_]+),", buf)
+        if match:
+            mod = match.group(1)
+            if mod not in mods:
+                logging.error("Module %s not found in KLP_RELOC_SYMBOLS. Please double check.", mod)
+                sys.exit(1)
 
 
 def register_argparser(subparser):
@@ -104,6 +143,8 @@ def create_lp_package(osc, lp_name, i, total, cs):
     osc.packages.checkout(prj, "klp", prj_path)
 
     push_branch = create_push_branch(cs, branch)
+
+    validate_patched_objs(kgr_path / lp_name)
 
     logging.info("(%s/%s) pushing %s using branches %s...",
                  i, total, cs.full_cs_name(), push_branch)
