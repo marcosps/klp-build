@@ -137,15 +137,16 @@ def scan_job(bug, cve):
     return result
 
 
-def scan(cve, conf, lp_filter, download, archs=None, savedir=None, extra_patches=None):
+def scan(cve, ups_commit, conf, lp_filter, download, archs=None, savedir=None, extra_patches=None):
     if archs is None:
         archs = utils.ARCHS
     if extra_patches is None:
         extra_patches = []
 
-    assert cve and utils.is_cve_valid(cve)
+    if cve:
+        assert utils.is_cve_valid(cve)
 
-    upstream, patches = get_patches(cve, savedir, extra_patches)
+    upstream, patches = get_patches(cve, ups_commit, savedir, extra_patches)
 
     all_codestreams = get_supported_codestreams()
     filtered_codesteams = utils.filter_codestreams(lp_filter, all_codestreams, verbose=True)

@@ -30,6 +30,9 @@ def register_argparser(subparser):
     add_arg_lp_name(args)
     add_arg_lp_filter(args)
     args.add_argument("--cve", type=str, required=False, help="The CVE assigned to this livepatch")
+    args.add_argument(
+        "--upstream-commit", type=str, required=False, help="The upstream commit that fixes this livepatch"
+    )
     args.add_argument("--conf", type=str, required=False, help="The kernel CONFIG used to be build the livepatch")
     args.add_argument(
         "--no-check",
@@ -95,16 +98,23 @@ def register_argparser(subparser):
     )
 
 
-def run(lp_name, lp_filter, no_check, archs, cve, conf, module, file_funcs,
-        mod_file_funcs, conf_mod_file_funcs, full_checks, add_patches=None):
+def run(lp_name, lp_filter, no_check, archs, cve, upstream_commit, conf, module,
+        file_funcs, mod_file_funcs, conf_mod_file_funcs, full_checks, add_patches=None):
     if add_patches is None:
         add_patches = []
 
-    codestreams = setup_codestreams(lp_name, {"cve": cve, "conf": conf,
-                                              "lp_filter": lp_filter,
-                                              "no_check": no_check,
-                                              "archs": archs,
-                                              "extra_patches": add_patches})
+    codestreams = setup_codestreams(
+        lp_name,
+        {
+            "cve": cve,
+            "upstream_commit": upstream_commit,
+            "conf": conf,
+            "lp_filter": lp_filter,
+            "no_check": no_check,
+            "archs": archs,
+            "extra_patches": add_patches,
+        },
+    )
 
     if conf:
         setup_manual(codestreams, archs, conf, module,
@@ -180,14 +190,16 @@ def setup_codestreams(lp_name, data):
     else:
         if not (cve := data["cve"]):
             cve = bugzilla.get_bug_cve(bugzilla.get_bug(lp_name))
-            assert cve, f"Could not retrieve CVE from bugzilla for {lp_name}"
-            logging.info("CVE retrieved from bugzilla: %s", cve)
-            data["cve"] = cve
+            if not cve:
+                assert not cve and data["upstream_commits"], f"Could not retrieve CVE from bugzilla for {lp_name}"
+                logging.info("Using upstream commit %s", data["upstream_commit"])
+            else:
+                logging.info("CVE retrieved from bugzilla: %s", cve)
+                data["cve"] = cve
 
-        _, upstream, patched_cs, codestreams = scan(data["cve"], data["conf"],
-                                                    data["lp_filter"], True,
-                                                    data["archs"],
-                                                    utils.get_workdir(lp_name),
+        _, upstream, patched_cs, codestreams = scan(data["cve"], data["upstream_commit"],
+                                                    data["conf"], data["lp_filter"], True,
+                                                    data["archs"], utils.get_workdir(lp_name),
                                                     data.get("extra_patches", []))
 
     # Add new codestreams names to the already existing list, skipping
