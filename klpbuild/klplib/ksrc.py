@@ -113,6 +113,10 @@ def get_patch_kernel_commit(patch, branch):
         # skip it, and try with the next found kernel commit.
         # This is a very corner case, so try at most 3 times.
         _, _, suse_commit = get_commit_data(kernel_commit)
+        # TODO: check why some commits on kernel expanded tree does not contain suse-commit
+        if not suse_commit:
+            continue
+
         if patch in get_commit_patch(suse_commit):
             break
 
@@ -190,18 +194,22 @@ def store_patch(pfile, patch, savedir, savedir_idx, bc):
         f.write(pfile)
 
 
-def get_branch_patches(cve, mbranch):
+def get_branch_patches(cve, mbranch, parent=None):
     kern_src = get_user_path('kernel_src_dir')
+
+    search_string = f"CVE-{cve}"
+    if parent:
+        search_string += f"|bsc#{parent}"
 
     try:
         patch_files = subprocess.check_output(
-            ["/usr/bin/git", "-C", kern_src, "grep", "-l", f"CVE-{cve}",
+            ["/usr/bin/git", "-C", kern_src, "grep", "-E", "-l", search_string,
              f"remotes/origin/{mbranch}", "--", "patches.suse/"],
             stderr=subprocess.STDOUT,
         ).decode(sys.stdout.encoding)
     except subprocess.CalledProcessError:
         # If we don't find any commits for RT branchs, try with the non-RT variant.
-        return [] if "RT" not in mbranch else get_branch_patches(cve, mbranch.replace("-RT", ""))
+        return [] if "RT" not in mbranch else get_branch_patches(cve, mbranch.replace("-RT", ""), parent)
 
     # Prepare command to extract correct ordering of patches
     cmd = ["/usr/bin/git", "-C", kern_src, "grep", "-o", "-h"]
@@ -221,7 +229,7 @@ def get_branch_patches(cve, mbranch):
 
 
 @__check_kernel_source_tags_are_fetched
-def get_patches(cve, savedir=None, extra_patches=None):
+def get_patches(cve, savedir=None, extra_patches=None, parent=None):
     if extra_patches is None:
         extra_patches = []
 
@@ -261,7 +269,7 @@ def get_patches(cve, savedir=None, extra_patches=None):
             else:
                 logging.debug("\textra patch %s not found in %s", extra_patch, mbranch)
 
-        for patch in get_branch_patches(cve, mbranch):
+        for patch in get_branch_patches(cve, mbranch, parent):
             if patch.strip().startswith("#"):
                 continue
 
