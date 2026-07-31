@@ -99,6 +99,9 @@ def get_cs_code(lp_name, working_cs):
                 # Reduce the noise from klp-ccp when expanding macros
                 src = re.sub(r"__compiletime_assert_\d+", "__compiletime_assert", src)
 
+                # Reduce the noise from trace macros
+                src = re.sub(r"__UNIQUE_ID_[\w]+", "__UNIQUE_ID", src)
+
                 # Remove empty lines
                 src = "".join([s for s in src.strip().splitlines(True) if s.strip()])
 
