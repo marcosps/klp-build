@@ -105,6 +105,9 @@ def get_cs_code(lp_name, working_cs):
                 # Reduce the noise from trace macros
                 src = re.sub(r"__UNIQUE_ID_[\w]+", "__UNIQUE_ID", src)
 
+                # The codestream can also appear in the extracted paths
+                src = re.sub(rf"{cs.full_cs_name()}", "", src)
+
                 # Remove empty lines
                 src = "".join([s for s in src.strip().splitlines(True) if s.strip()])
 
