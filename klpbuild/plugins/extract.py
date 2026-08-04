@@ -105,6 +105,9 @@ def get_cs_code(lp_name, working_cs):
                 # The codestream can also appear in the extracted paths
                 src = re.sub(rf"{cs.full_cs_name()}", "", src)
 
+                # The codestream can also appear in the extracted paths
+                src = re.sub(rf', "i" \(\d+\),', ', "i" \(\),', src)
+
                 # Remove empty lines
                 src = "".join([s for s in src.strip().splitlines(True) if s.strip()])
 
