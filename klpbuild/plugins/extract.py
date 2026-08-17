@@ -31,8 +31,11 @@ PLUGIN_CMD = "extract"
 
 UNSUPPORTED_MACROS = [
         "__KERNEL__",
+        "CC_HAVE_ASM_GOTO",
+        "CC_USING_FENTRY",
         "MODULE",
         "KBUILD_MODNAME",
+        "RETPOLINE",
         r"__has_attribute\(",
         "__seg_gs"
         ]
